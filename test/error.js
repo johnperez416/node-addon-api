@@ -9,8 +9,12 @@ if (process.argv[2] === 'fatal') {
 
 module.exports = require('./common').runTestWithBindingPath(test);
 
+const napiVersion = Number(process.env.NAPI_VERSION ?? process.versions.napi);
+
 function test (bindingPath) {
   const binding = require(bindingPath);
+  binding.error.testErrorCopySemantics();
+  binding.error.testErrorMoveSemantics();
 
   assert.throws(() => binding.error.throwApiError('test'), function (err) {
     return err instanceof Error && err.message.includes('Invalid');
@@ -24,13 +28,39 @@ function test (bindingPath) {
     return err instanceof Error && err.message === 'test';
   });
 
-  assert.throws(() => binding.error.throwTypeError('test'), function (err) {
+  assert.throws(() => binding.error.throwTypeErrorCStr('test'), function (err) {
     return err instanceof TypeError && err.message === 'test';
+  });
+
+  assert.throws(() => binding.error.throwRangeErrorCStr('test'), function (err) {
+    return err instanceof RangeError && err.message === 'test';
   });
 
   assert.throws(() => binding.error.throwRangeError('test'), function (err) {
     return err instanceof RangeError && err.message === 'test';
   });
+
+  assert.throws(() => binding.error.throwTypeErrorCtor(new TypeError('jsTypeError')), function (err) {
+    return err instanceof TypeError && err.message === 'jsTypeError';
+  });
+
+  assert.throws(() => binding.error.throwRangeErrorCtor(new RangeError('rangeTypeError')), function (err) {
+    return err instanceof RangeError && err.message === 'rangeTypeError';
+  });
+
+  if (napiVersion > 8) {
+    assert.throws(() => binding.error.throwSyntaxErrorCStr('test'), function (err) {
+      return err instanceof SyntaxError && err.message === 'test';
+    });
+
+    assert.throws(() => binding.error.throwSyntaxError('test'), function (err) {
+      return err instanceof SyntaxError && err.message === 'test';
+    });
+
+    assert.throws(() => binding.error.throwSyntaxErrorCtor(new SyntaxError('syntaxTypeError')), function (err) {
+      return err instanceof SyntaxError && err.message === 'syntaxTypeError';
+    });
+  }
 
   assert.throws(
     () => binding.error.doNotCatch(

@@ -7,6 +7,77 @@
 
 using namespace Napi;
 
+class TestWorkerWithUserDefRecv : public AsyncWorker {
+ public:
+  static void DoWork(const CallbackInfo& info) {
+    Object recv = info[0].As<Object>();
+    Function cb = info[1].As<Function>();
+
+    TestWorkerWithUserDefRecv* worker = new TestWorkerWithUserDefRecv(recv, cb);
+    worker->Queue();
+  }
+
+  static void DoWorkWithAsyncRes(const CallbackInfo& info) {
+    Object recv = info[0].As<Object>();
+    Function cb = info[1].As<Function>();
+    Value resource = info[2];
+
+    TestWorkerWithUserDefRecv* worker = nullptr;
+    if (resource == info.Env().Null()) {
+      worker = new TestWorkerWithUserDefRecv(recv, cb, "TestResource");
+    } else {
+      worker = new TestWorkerWithUserDefRecv(
+          recv, cb, "TestResource", resource.As<Object>());
+    }
+
+    worker->Queue();
+  }
+
+ protected:
+  void Execute() override {}
+
+ private:
+  TestWorkerWithUserDefRecv(const Object& recv, const Function& cb)
+      : AsyncWorker(recv, cb) {}
+  TestWorkerWithUserDefRecv(const Object& recv,
+                            const Function& cb,
+                            const char* resource_name)
+      : AsyncWorker(recv, cb, resource_name) {}
+  TestWorkerWithUserDefRecv(const Object& recv,
+                            const Function& cb,
+                            const char* resource_name,
+                            const Object& resource)
+      : AsyncWorker(recv, cb, resource_name, resource) {}
+};
+
+// Using default std::allocator impl, but assuming user can define their own
+// allocate/deallocate methods
+class CustomAllocWorker : public AsyncWorker {
+  using Allocator = std::allocator<CustomAllocWorker>;
+
+ public:
+  CustomAllocWorker(Function& cb) : AsyncWorker(cb){};
+  static void DoWork(const CallbackInfo& info) {
+    Function cb = info[0].As<Function>();
+    Allocator allocator;
+    CustomAllocWorker* newWorker = allocator.allocate(1);
+    std::allocator_traits<Allocator>::construct(allocator, newWorker, cb);
+    newWorker->Queue();
+  }
+
+ protected:
+  void Execute() override {}
+  void Destroy() override {
+    assert(this->_secretVal == 24);
+    Allocator allocator;
+    std::allocator_traits<Allocator>::destroy(allocator, this);
+    allocator.deallocate(this, 1);
+  }
+
+ private:
+  int _secretVal = 24;
+};
+
 class TestWorker : public AsyncWorker {
  public:
   static void DoWork(const CallbackInfo& info) {
@@ -15,7 +86,13 @@ class TestWorker : public AsyncWorker {
     Function cb = info[2].As<Function>();
     Value data = info[3];
 
-    TestWorker* worker = new TestWorker(cb, "TestResource", resource);
+    TestWorker* worker = nullptr;
+    if (resource == info.Env().Null()) {
+      worker = new TestWorker(cb, "TestResource");
+    } else {
+      worker = new TestWorker(cb, "TestResource", resource);
+    }
+
     worker->Receiver().Set("data", data);
     worker->_succeed = succeed;
     worker->Queue();
@@ -31,7 +108,9 @@ class TestWorker : public AsyncWorker {
  private:
   TestWorker(Function cb, const char* resource_name, const Object& resource)
       : AsyncWorker(cb, resource_name, resource) {}
-  bool _succeed;
+  TestWorker(Function cb, const char* resource_name)
+      : AsyncWorker(cb, resource_name) {}
+  bool _succeed{};
 };
 
 class TestWorkerWithResult : public AsyncWorker {
@@ -66,18 +145,31 @@ class TestWorkerWithResult : public AsyncWorker {
                        const char* resource_name,
                        const Object& resource)
       : AsyncWorker(cb, resource_name, resource) {}
-  bool _succeed;
+  bool _succeed{};
 };
 
 class TestWorkerNoCallback : public AsyncWorker {
  public:
   static Value DoWork(const CallbackInfo& info) {
+    bool succeed = info[0].As<Boolean>();
+
+    TestWorkerNoCallback* worker = new TestWorkerNoCallback(info.Env());
+    worker->_succeed = succeed;
+    worker->Queue();
+    return worker->_deferred.Promise();
+  }
+
+  static Value DoWorkWithAsyncRes(const CallbackInfo& info) {
     napi_env env = info.Env();
     bool succeed = info[0].As<Boolean>();
     Object resource = info[1].As<Object>();
 
-    TestWorkerNoCallback* worker =
-        new TestWorkerNoCallback(env, "TestResource", resource);
+    TestWorkerNoCallback* worker = nullptr;
+    if (resource == info.Env().Null()) {
+      worker = new TestWorkerNoCallback(env, "TestResource");
+    } else {
+      worker = new TestWorkerNoCallback(env, "TestResource", resource);
+    }
     worker->_succeed = succeed;
     worker->Queue();
     return worker->_deferred.Promise();
@@ -91,13 +183,20 @@ class TestWorkerNoCallback : public AsyncWorker {
   }
 
  private:
+  TestWorkerNoCallback(Napi::Env env)
+      : AsyncWorker(env), _deferred(Napi::Promise::Deferred::New(env)) {}
+
+  TestWorkerNoCallback(napi_env env, const char* resource_name)
+      : AsyncWorker(env, resource_name),
+        _deferred(Napi::Promise::Deferred::New(env)) {}
+
   TestWorkerNoCallback(napi_env env,
                        const char* resource_name,
                        const Object& resource)
       : AsyncWorker(env, resource_name, resource),
         _deferred(Napi::Promise::Deferred::New(env)) {}
   Promise::Deferred _deferred;
-  bool _succeed;
+  bool _succeed{};
 };
 
 class EchoWorker : public AsyncWorker {
@@ -152,7 +251,7 @@ class FailCancelWorker : public AsyncWorker {
 #ifdef NAPI_CPP_EXCEPTIONS
     try {
       cancelWorker->Cancel();
-    } catch (Napi::Error& e) {
+    } catch (Napi::Error&) {
       Napi::Error::New(info.Env(), "Unable to cancel async worker tasks")
           .ThrowAsJavaScriptException();
     }
@@ -193,7 +292,7 @@ class CancelWorker : public AsyncWorker {
 #ifdef NAPI_CPP_EXCEPTIONS
     try {
       cancelWorker->Cancel();
-    } catch (Napi::Error& e) {
+    } catch (Napi::Error&) {
       Napi::Error::New(info.Env(), "Unable to cancel async worker tasks")
           .ThrowAsJavaScriptException();
     }
@@ -222,7 +321,12 @@ class CancelWorker : public AsyncWorker {
 
 Object InitAsyncWorker(Env env) {
   Object exports = Object::New(env);
+  exports["doWorkRecv"] = Function::New(env, TestWorkerWithUserDefRecv::DoWork);
+  exports["doWithRecvAsyncRes"] =
+      Function::New(env, TestWorkerWithUserDefRecv::DoWorkWithAsyncRes);
   exports["doWork"] = Function::New(env, TestWorker::DoWork);
+  exports["doWorkAsyncResNoCallback"] =
+      Function::New(env, TestWorkerNoCallback::DoWorkWithAsyncRes);
   exports["doWorkNoCallback"] =
       Function::New(env, TestWorkerNoCallback::DoWork);
   exports["doWorkWithResult"] =
@@ -231,5 +335,7 @@ Object InitAsyncWorker(Env env) {
 
   exports["expectCancelToFail"] =
       Function::New(env, FailCancelWorker::DoCancel);
+  exports["expectCustomAllocWorkerToDealloc"] =
+      Function::New(env, CustomAllocWorker::DoWork);
   return exports;
 }

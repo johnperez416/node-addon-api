@@ -24,6 +24,9 @@ async function test (binding) {
       obj.testSetter = 'instance getter 2';
       assert.strictEqual(obj.testGetter, 'instance getter 2');
       assert.strictEqual(obj.testGetterT, 'instance getter 2');
+
+      assert.throws(() => clazz.prototype.testGetter, /Invalid argument/);
+      assert.throws(() => clazz.prototype.testGetterT, /Invalid argument/);
     }
 
     // read write-only
@@ -61,6 +64,9 @@ async function test (binding) {
 
       obj.testGetSetT = 'instance getset 4';
       assert.strictEqual(obj.testGetSetT, 'instance getset 4');
+
+      assert.throws(() => { clazz.prototype.testGetSet = 'instance getset'; }, /Invalid argument/);
+      assert.throws(() => { clazz.prototype.testGetSetT = 'instance getset'; }, /Invalid argument/);
     }
 
     // rw symbol
@@ -98,6 +104,9 @@ async function test (binding) {
     assert.strictEqual(obj.testMethodT(), 'method<>(const char*)');
     obj[clazz.kTestVoidMethodTInternal]('method<>(Symbol)');
     assert.strictEqual(obj[clazz.kTestMethodTInternal](), 'method<>(Symbol)');
+    assert.throws(() => clazz.prototype.testMethod('method'));
+    assert.throws(() => clazz.prototype.testMethodT());
+    assert.throws(() => clazz.prototype.testVoidMethodT('method<>(const char*)'));
   };
 
   const testEnumerables = (obj, clazz) => {
@@ -210,6 +219,10 @@ async function test (binding) {
   };
 
   const testStaticMethod = (clazz) => {
+    clazz.testStaticVoidMethod(52);
+    assert.strictEqual(clazz.testStaticGetter, 52);
+    clazz[clazz.kTestStaticVoidMethodInternal](94);
+    assert.strictEqual(clazz.testStaticGetter, 94);
     assert.strictEqual(clazz.testStaticMethod('method'), 'method static');
     assert.strictEqual(clazz[clazz.kTestStaticMethodInternal]('method'), 'method static internal');
     clazz.testStaticVoidMethodT('static method<>(const char*)');
@@ -224,7 +237,8 @@ async function test (binding) {
       'testStaticValue',
       'testStaticGetter',
       'testStaticGetSet',
-      'testStaticMethod'
+      'testStaticMethod',
+      'canUnWrap'
     ]);
 
     // for..in
@@ -238,7 +252,8 @@ async function test (binding) {
         'testStaticValue',
         'testStaticGetter',
         'testStaticGetSet',
-        'testStaticMethod'
+        'testStaticMethod',
+        'canUnWrap'
       ]);
     }
   };
@@ -260,6 +275,11 @@ async function test (binding) {
     ]);
   }
 
+  const testUnwrap = (obj, clazz) => {
+    obj.testSetter = 'unwrapTest';
+    assert(clazz.canUnWrap(obj, 'unwrapTest'));
+  };
+
   const testObj = (obj, clazz) => {
     testValue(obj, clazz);
     testAccessor(obj, clazz);
@@ -268,6 +288,7 @@ async function test (binding) {
     testEnumerables(obj, clazz);
 
     testConventions(obj, clazz);
+    testUnwrap(obj, clazz);
   };
 
   async function testClass (clazz) {

@@ -2,30 +2,48 @@ name: Node.js CI Unix Platform
 
 on: [push, pull_request]
 
+env:
+  PYTHON_VERSION: '3.11'
+
+permissions:
+  contents: read
+
 jobs:
   test:
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
-        node-version:  [14.x, 16.x, 18.x]
-        compiler:
-          - gcc
-          - clang
+        api_version:
+          - standard
+          - experimental
+        node-version:
+          - 18.x
+          - 20.x
+          - 22.x
         os:
-          - ubuntu-latest
           - macos-latest
+          - ubuntu-latest
+        compiler:
+          - clang
+          - gcc
+        exclude:
+          - os: macos-latest
+            compiler: gcc # GCC is an alias for clang on the MacOS image.
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Install system dependencies
-      run: |
-        if [ "${{ matrix.compiler }}" = "gcc" -a "${{ matrix.os }}" = ubuntu-* ]; then
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
-          sudo apt-get install g++-6.5
-        fi
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
         node-version: ${{ matrix.node-version }}
     - name: Check Node.js installation
@@ -37,15 +55,20 @@ jobs:
         npm install
     - name: npm test
       run: |
+        if [ "${{ matrix.api_version }}" = "experimental" ]; then
+          export NAPI_VERSION=2147483647
+        fi
         if [ "${{ matrix.compiler }}" = "gcc" ]; then
           export CC="gcc" CXX="g++"
-        fi
-        if [ "${{ matrix.compiler }}" = "gcc" -a "${{ matrix.os }}" = ubuntu-* ]; then
-          export CC="gcc-6.5" CXX="g++-6.5" AR="gcc-ar-6.5" RANLIB="gcc-ranlib-6.5" NM="gcc-nm-6.5"
         fi
         if [ "${{ matrix.compiler }}" = "clang" ]; then
           export CC="clang" CXX="clang++"
         fi
+        echo "CC=\"$CC\" CXX=\"$CXX\""
+        echo "$CC --version"
+        $CC --version
+        echo "$CXX --version"
+        $CXX --version
         export CFLAGS="$CFLAGS -O3 --coverage" LDFLAGS="$LDFLAGS --coverage"
         echo "CFLAGS=\"$CFLAGS\" LDFLAGS=\"$LDFLAGS\""
         npm run pretest -- --verbose

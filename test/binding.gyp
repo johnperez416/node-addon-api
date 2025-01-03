@@ -17,16 +17,20 @@
         'basic_types/number.cc',
         'basic_types/value.cc',
         'bigint.cc',
+        'callbackInfo.cc',
         'date.cc',
         'binding.cc',
+        'buffer_no_external.cc',
         'buffer.cc',
         'callbackscope.cc',
         'dataview/dataview.cc',
         'dataview/dataview_read_write.cc',
         'env_cleanup.cc',
+        'env_misc.cc',
         'error.cc',
         'error_handling_for_primitives.cc',
         'external.cc',
+        'finalizer_order.cc',
         'function.cc',
         'function_reference.cc',
         'handlescope.cc',
@@ -50,14 +54,17 @@
         'object/subscript_operator.cc',
         'promise.cc',
         'run_script.cc',
-        "symbol.cc",
+        'symbol.cc',
         'threadsafe_function/threadsafe_function_ctx.cc',
+        'threadsafe_function/threadsafe_function_exception.cc',
         'threadsafe_function/threadsafe_function_existing_tsfn.cc',
         'threadsafe_function/threadsafe_function_ptr.cc',
         'threadsafe_function/threadsafe_function_sum.cc',
         'threadsafe_function/threadsafe_function_unref.cc',
         'threadsafe_function/threadsafe_function.cc',
+        'type_taggable.cc',
         'typed_threadsafe_function/typed_threadsafe_function_ctx.cc',
+        'typed_threadsafe_function/typed_threadsafe_function_exception.cc',
         'typed_threadsafe_function/typed_threadsafe_function_existing_tsfn.cc',
         'typed_threadsafe_function/typed_threadsafe_function_ptr.cc',
         'typed_threadsafe_function/typed_threadsafe_function_sum.cc',
@@ -78,45 +85,74 @@
         'binding-swallowexcept.cc',
         'error.cc',
       ],
+      'build_sources_except_all': [
+        'except_all.cc',
+      ],
+      'build_sources_type_check': [
+        'value_type_cast.cc'
+      ],
+      'want_coverage': '<!(node -p process.env.npm_config_coverage)',
+      'use_node_api_headers': '<!(node -p process.env.use_node_api_headers)',
       'conditions': [
         ['disable_deprecated!="true"', {
           'build_sources': ['object/object_deprecated.cc']
         }]
       ]
     },
+    'conditions': [
+      ['want_coverage=="true" and OS=="linux"', {
+        'cflags_cc': ['--coverage'],
+        'ldflags': ['--coverage'],
+      }],
+      ['use_node_api_headers=="true"', {
+        # prepend to the include_dirs list
+        'include_dirs+': ["<!(node -p \"require('node-api-headers').include_dir\")"],
+      }],
+    ],
   },
   'targets': [
     {
       'target_name': 'binding',
-      'includes': ['../except.gypi'],
-      'sources': ['>@(build_sources)']
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_except'],
+      'sources': ['>@(build_sources)'],
+      'defines': ['NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS']
+    },
+    {
+      'target_name': 'binding_except_all',
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_except_all'],
+      'sources': [ '>@(build_sources_except_all)']
     },
     {
       'target_name': 'binding_noexcept',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources)']
     },
     {
       'target_name': 'binding_noexcept_maybe',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_maybe'],
       'sources': ['>@(build_sources)'],
-      'defines': ['NODE_ADDON_API_ENABLE_MAYBE']
     },
     {
       'target_name': 'binding_swallowexcept',
-      'includes': ['../except.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_except'],
       'sources': [ '>@(build_sources_swallowexcept)'],
       'defines': ['NODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS']
     },
     {
       'target_name': 'binding_swallowexcept_noexcept',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources_swallowexcept)'],
       'defines': ['NODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS']
     },
     {
+      'target_name': 'binding_type_check',
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
+      'sources': ['>@(build_sources_type_check)'],
+      'defines': ['NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS']
+    },
+    {
       'target_name': 'binding_custom_namespace',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources)'],
       'defines': ['NAPI_CPP_CUSTOM_NAMESPACE=cstm']
     },

@@ -78,7 +78,26 @@ Casts to another type of `Napi::Value`, when the actual type is known or
 assumed.
 
 This conversion does not coerce the type. Calling any methods inappropriate for
-the actual value type will throw `Napi::Error`.
+the actual value type will throw `Napi::Error`. When C++ exceptions are
+disabled, the thrown error will not be reflected before control returns to
+JavaScript.
+
+In order to enforce expected type, use `Napi::Value::Is*()` methods to check
+the type before calling `Napi::Value::As()`, or compile with definition
+`NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS` to enforce type checks.
+
+### UnsafeAs
+
+```cpp
+template <typename T> T Napi::Value::UnsafeAs() const;
+```
+
+Casts to another type of `Napi::Value`, when the actual type is known or
+assumed.
+
+This conversion does not coerce the type. This does not check the type even if
+`NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS` is defined. This indicates intentional
+unsafe type cast. Use `Napi::Value::As()` if possible.
 
 ### Env
 
@@ -134,6 +153,15 @@ bool Napi::Value::IsArrayBuffer() const;
 
 Returns `true` if the underlying value is a JavaScript `Napi::ArrayBuffer` or
 `false` otherwise.
+
+### IsBigInt
+
+```cpp
+bool Napi::Value::IsBigInt() const;
+```
+
+Returns `true` if the underlying value is a JavaScript `Napi::BigInt` or `false`
+otherwise.
 
 ### IsBoolean
 
