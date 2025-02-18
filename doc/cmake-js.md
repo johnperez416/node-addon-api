@@ -45,13 +45,32 @@ The following line in the `CMakeLists.txt` file will enable Node-API experimenta
 add_definitions(-DNAPI_EXPERIMENTAL)
 ```
 
+### Exception Handling
+
+To enable C++ exception handling (for more info see: [Setup](setup.md)), define
+the corresponding preprocessor directives depending on which exception handling
+behavior is desired.
+
+To enable C++ exception handling with `Napi::Error` objects only:
+
+```
+add_definitions(-DNODE_ADDON_API_CPP_EXCEPTIONS)
+```
+
+To enable C++ exception handling for all exceptions thrown:
+
+```
+add_definitions(-DNODE_ADDON_API_CPP_EXCEPTIONS)
+add_definitions(-DNODE_ADDON_API_CPP_EXCEPTIONS_ALL)
+```
+
 ### node-addon-api
 
 If your Node-API native add-on uses the optional [**node-addon-api**](https://github.com/nodejs/node-addon-api#node-addon-api-module) C++ wrapper, the `CMakeLists.txt` file requires additional configuration information as described on the [CMake.js README file](https://github.com/cmake-js/cmake-js#node-api-and-node-addon-api).
 
 ## Example
 
-A working example of an Node-API native addon built using CMake.js can be found on the [node-addon-examples repository](https://github.com/nodejs/node-addon-examples/tree/HEAD/build_with_cmake#building-n-api-addons-using-cmakejs).
+A working example of an Node-API native addon built using CMake.js can be found on the [node-addon-examples repository](https://github.com/nodejs/node-addon-examples/tree/main/src/8-tooling/build_with_cmake#building-node-api-addons-using-cmakejs).
 
 ## **CMake** Reference
 

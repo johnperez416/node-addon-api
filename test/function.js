@@ -18,7 +18,7 @@ function test (binding) {
 
   assert.deepStrictEqual(binding.valueCallback(), { foo: 'bar' });
 
-  /* eslint-disable-next-line no-new, new-cap */
+  /* eslint-disable-next-line new-cap */
   assert.strictEqual(new binding.newTargetCallback(), binding.newTargetCallback);
   assert.strictEqual(binding.newTargetCallback(), undefined);
 
@@ -89,7 +89,7 @@ function test (binding) {
   assert.deepStrictEqual(args, [7, 8, 9]);
 
   assert.throws(() => {
-    binding.callWithInvalidReceiver();
+    binding.callWithInvalidReceiver(() => {});
   }, /Invalid (pointer passed as )?argument/);
 
   obj = binding.callConstructorWithArgs(testConstructor, 5, 6, 7);

@@ -1,6 +1,6 @@
 # Object
 
-Class `Napi::Object` inherits from class [`Napi::Value`][].
+Class `Napi::Object` inherits from class [`Napi::TypeTaggable`][].
 
 The `Napi::Object` class corresponds to a JavaScript object. It is extended by the following node-addon-api classes that you may use when working with more specific types:
 
@@ -407,5 +407,5 @@ void Increment(const CallbackInfo& info) {
 }
 ```
 
-[`Napi::Value`]: ./value.md
+[`Napi::TypeTaggable`]: ./type_taggable.md
 [`Napi::Value::From`]: ./value.md#from

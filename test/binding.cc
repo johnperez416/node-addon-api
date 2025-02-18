@@ -22,12 +22,14 @@ Object InitBasicTypesValue(Env env);
 Object InitBigInt(Env env);
 #endif
 Object InitBuffer(Env env);
+Object InitBufferNoExternal(Env env);
 #if (NAPI_VERSION > 2)
 Object InitCallbackScope(Env env);
 #endif
 #if (NAPI_VERSION > 4)
 Object InitDate(Env env);
 #endif
+Object InitCallbackInfo(Env env);
 Object InitDataView(Env env);
 Object InitDataViewReadWrite(Env env);
 Object InitEnvCleanup(Env env);
@@ -48,12 +50,14 @@ Object InitPromise(Env env);
 Object InitRunScript(Env env);
 #if (NAPI_VERSION > 3)
 Object InitThreadSafeFunctionCtx(Env env);
+Object InitThreadSafeFunctionException(Env env);
 Object InitThreadSafeFunctionExistingTsfn(Env env);
 Object InitThreadSafeFunctionPtr(Env env);
 Object InitThreadSafeFunctionSum(Env env);
 Object InitThreadSafeFunctionUnref(Env env);
 Object InitThreadSafeFunction(Env env);
 Object InitTypedThreadSafeFunctionCtx(Env env);
+Object InitTypedThreadSafeFunctionException(Env env);
 Object InitTypedThreadSafeFunctionExistingTsfn(Env env);
 Object InitTypedThreadSafeFunctionPtr(Env env);
 Object InitTypedThreadSafeFunctionSum(Env env);
@@ -74,11 +78,15 @@ Object InitVersionManagement(Env env);
 Object InitThunkingManual(Env env);
 #if (NAPI_VERSION > 7)
 Object InitObjectFreezeSeal(Env env);
+Object InitTypeTaggable(Env env);
 #endif
-
+#if (NAPI_VERSION > 8)
+Object InitEnvMiscellaneous(Env env);
+#endif
 #if defined(NODE_ADDON_API_ENABLE_MAYBE)
 Object InitMaybeCheck(Env env);
 #endif
+Object InitFinalizerOrder(Env env);
 
 Object Init(Env env, Object exports) {
 #if (NAPI_VERSION > 5)
@@ -105,9 +113,11 @@ Object Init(Env env, Object exports) {
   exports.Set("date", InitDate(env));
 #endif
   exports.Set("buffer", InitBuffer(env));
+  exports.Set("bufferNoExternal", InitBufferNoExternal(env));
 #if (NAPI_VERSION > 2)
   exports.Set("callbackscope", InitCallbackScope(env));
 #endif
+  exports.Set("callbackInfo", InitCallbackInfo(env));
   exports.Set("dataview", InitDataView(env));
   exports.Set("dataview_read_write", InitDataView(env));
   exports.Set("dataview_read_write", InitDataViewReadWrite(env));
@@ -132,6 +142,8 @@ Object Init(Env env, Object exports) {
   exports.Set("symbol", InitSymbol(env));
 #if (NAPI_VERSION > 3)
   exports.Set("threadsafe_function_ctx", InitThreadSafeFunctionCtx(env));
+  exports.Set("threadsafe_function_exception",
+              InitThreadSafeFunctionException(env));
   exports.Set("threadsafe_function_existing_tsfn",
               InitThreadSafeFunctionExistingTsfn(env));
   exports.Set("threadsafe_function_ptr", InitThreadSafeFunctionPtr(env));
@@ -140,6 +152,8 @@ Object Init(Env env, Object exports) {
   exports.Set("threadsafe_function", InitThreadSafeFunction(env));
   exports.Set("typed_threadsafe_function_ctx",
               InitTypedThreadSafeFunctionCtx(env));
+  exports.Set("typed_threadsafe_function_exception",
+              InitTypedThreadSafeFunctionException(env));
   exports.Set("typed_threadsafe_function_existing_tsfn",
               InitTypedThreadSafeFunctionExistingTsfn(env));
   exports.Set("typed_threadsafe_function_ptr",
@@ -164,11 +178,22 @@ Object Init(Env env, Object exports) {
   exports.Set("thunking_manual", InitThunkingManual(env));
 #if (NAPI_VERSION > 7)
   exports.Set("object_freeze_seal", InitObjectFreezeSeal(env));
+  exports.Set("type_taggable", InitTypeTaggable(env));
+#endif
+#if (NAPI_VERSION > 8)
+  exports.Set("env_misc", InitEnvMiscellaneous(env));
 #endif
 
 #if defined(NODE_ADDON_API_ENABLE_MAYBE)
   exports.Set("maybe_check", InitMaybeCheck(env));
 #endif
+
+  exports.Set("finalizer_order", InitFinalizerOrder(env));
+
+  exports.Set(
+      "isExperimental",
+      Napi::Boolean::New(env, NAPI_VERSION == NAPI_VERSION_EXPERIMENTAL));
+
   return exports;
 }
 

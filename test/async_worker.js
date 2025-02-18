@@ -76,8 +76,20 @@ async function test (binding) {
   assert.equal(taskFailed, true, 'We expect task cancellation to fail');
 
   if (!checkAsyncHooks()) {
+    binding.asyncworker.expectCustomAllocWorkerToDealloc(() => {});
+
     await new Promise((resolve) => {
-      binding.asyncworker.doWork(true, {}, function (e) {
+      const obj = { data: 'test data' };
+      binding.asyncworker.doWorkRecv(obj, function (e) {
+        assert.strictEqual(typeof e, 'undefined');
+        assert.strictEqual(typeof this, 'object');
+        assert.strictEqual(this.data, 'test data');
+        resolve();
+      });
+    });
+
+    await new Promise((resolve) => {
+      binding.asyncworker.doWork(true, null, function (e) {
         assert.strictEqual(typeof e, 'undefined');
         assert.strictEqual(typeof this, 'object');
         assert.strictEqual(this.data, 'test data');
@@ -113,6 +125,62 @@ async function test (binding) {
     const hooks = installAsyncHooksForTest();
     const triggerAsyncId = asyncHooks.executionAsyncId();
     await new Promise((resolve) => {
+      const recvObj = { data: 'test data' };
+      binding.asyncworker.doWithRecvAsyncRes(recvObj, function (e) {
+        assert.strictEqual(typeof e, 'undefined');
+        assert.strictEqual(typeof this, 'object');
+        assert.strictEqual(this.data, 'test data');
+        resolve();
+      }, { foo: 'fooBar' });
+    });
+
+    await hooks.then(actual => {
+      assert.deepStrictEqual(actual, [
+        {
+          eventName: 'init',
+          type: 'TestResource',
+          triggerAsyncId,
+          resource: { foo: 'fooBar' }
+        },
+        { eventName: 'before' },
+        { eventName: 'after' },
+        { eventName: 'destroy' }
+      ]);
+    }).catch(common.mustNotCall());
+  }
+
+  {
+    const hooks = installAsyncHooksForTest();
+    const triggerAsyncId = asyncHooks.executionAsyncId();
+    await new Promise((resolve) => {
+      const recvObj = { data: 'test data' };
+      binding.asyncworker.doWithRecvAsyncRes(recvObj, function (e) {
+        assert.strictEqual(typeof e, 'undefined');
+        assert.strictEqual(typeof this, 'object');
+        assert.strictEqual(this.data, 'test data');
+        resolve();
+      }, null);
+    });
+
+    await hooks.then(actual => {
+      assert.deepStrictEqual(actual, [
+        {
+          eventName: 'init',
+          type: 'TestResource',
+          triggerAsyncId,
+          resource: { }
+        },
+        { eventName: 'before' },
+        { eventName: 'after' },
+        { eventName: 'destroy' }
+      ]);
+    }).catch(common.mustNotCall());
+  }
+
+  {
+    const hooks = installAsyncHooksForTest();
+    const triggerAsyncId = asyncHooks.executionAsyncId();
+    await new Promise((resolve) => {
       binding.asyncworker.doWork(true, { foo: 'foo' }, function (e) {
         assert.strictEqual(typeof e, 'undefined');
         assert.strictEqual(typeof this, 'object');
@@ -126,7 +194,7 @@ async function test (binding) {
         {
           eventName: 'init',
           type: 'TestResource',
-          triggerAsyncId: triggerAsyncId,
+          triggerAsyncId,
           resource: { foo: 'foo' }
         },
         { eventName: 'before' },
@@ -156,7 +224,7 @@ async function test (binding) {
         {
           eventName: 'init',
           type: 'TestResource',
-          triggerAsyncId: triggerAsyncId,
+          triggerAsyncId,
           resource: { foo: 'foo' }
         },
         { eventName: 'before' },
@@ -184,7 +252,7 @@ async function test (binding) {
         {
           eventName: 'init',
           type: 'TestResource',
-          triggerAsyncId: triggerAsyncId,
+          triggerAsyncId,
           resource: { foo: 'foo' }
         },
         { eventName: 'before' },
