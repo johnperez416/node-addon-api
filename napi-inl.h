@@ -1199,6 +1199,13 @@ inline Date Date::New(napi_env env, double val) {
   return Date(env, value);
 }
 
+inline Date Date::New(napi_env env, std::chrono::system_clock::time_point tp) {
+  using namespace std::chrono;
+  auto ms = static_cast<double>(
+      duration_cast<milliseconds>(tp.time_since_epoch()).count());
+  return Date::New(env, ms);
+}
+
 inline void Date::CheckCast(napi_env env, napi_value value) {
   NAPI_CHECK(value != nullptr, "Date::CheckCast", "empty value");
 

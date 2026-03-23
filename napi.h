@@ -17,6 +17,7 @@
 #if NAPI_HAS_THREADS
 #include <mutex>
 #endif  // NAPI_HAS_THREADS
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -683,6 +684,12 @@ class Date : public Value {
   /// Creates a new Date value from a double primitive.
   static Date New(napi_env env,  ///< Node-API environment
                   double value   ///< Number value
+  );
+
+  /// Creates a new Date value from a std::chrono::system_clock::time_point.
+  static Date New(
+      napi_env env,  ///< Node-API environment
+      std::chrono::system_clock::time_point time_point  ///< Time point value
   );
 
   static void CheckCast(napi_env env, napi_value value);
