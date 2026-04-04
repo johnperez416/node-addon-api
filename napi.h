@@ -19,6 +19,7 @@
 #endif  // NAPI_HAS_THREADS
 #include <chrono>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known
@@ -725,6 +726,11 @@ class String : public Name {
                     const std::u16string& value  ///< UTF-16 encoded C++ string
   );
 
+  /// Creates a new String value from a UTF-8 encoded C++ string view.
+  static String New(napi_env env,           ///< Node-API environment
+                    std::string_view value  ///< UTF-8 encoded C++ string view
+  );
+
   /// Creates a new String value from a UTF-8 encoded C string.
   static String New(
       napi_env env,      ///< Node-API environment
@@ -796,6 +802,13 @@ class Symbol : public Name {
       napi_env env,  ///< Node-API environment
       const std::string&
           description  ///< UTF-8 encoded C++ string describing the symbol
+  );
+
+  /// Creates a new Symbol value with a description.
+  static Symbol New(
+      napi_env env,  ///< Node-API environment
+      std::string_view
+          description  ///< UTF-8 encoded C++ string view describing the symbol
   );
 
   /// Creates a new Symbol value with a description.

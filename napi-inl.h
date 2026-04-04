@@ -18,6 +18,7 @@
 #if NAPI_HAS_THREADS
 #include <mutex>
 #endif  // NAPI_HAS_THREADS
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -1262,6 +1263,10 @@ inline String String::New(napi_env env, const std::u16string& val) {
   return String::New(env, val.c_str(), val.size());
 }
 
+inline String String::New(napi_env env, std::string_view val) {
+  return String::New(env, val.data(), val.size());
+}
+
 inline String String::New(napi_env env, const char* val) {
   // TODO(@gabrielschulhof) Remove if-statement when core's error handling is
   // available in all supported versions.
@@ -1367,6 +1372,11 @@ inline Symbol Symbol::New(napi_env env, const char* description) {
 }
 
 inline Symbol Symbol::New(napi_env env, const std::string& description) {
+  napi_value descriptionValue = String::New(env, description);
+  return Symbol::New(env, descriptionValue);
+}
+
+inline Symbol Symbol::New(napi_env env, std::string_view description) {
   napi_value descriptionValue = String::New(env, description);
   return Symbol::New(env, descriptionValue);
 }
